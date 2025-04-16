@@ -8,3 +8,8 @@ This repository contains a collection of project that form the foundation of my 
 ## Structure
 - **Main Branch**: General documentation
 - **Project Branches**: Each branch contains an individual project with its own README, codebase and instructions.
+
+
+## Project Available
+- ### [`Movie Data Analysis Using Python and Pandas`](https://github.com/GEssuman/data-engineering-labs/tree/movie-data-analysis)
+- ### [`Inventory and Order Management System Using SQL`]
