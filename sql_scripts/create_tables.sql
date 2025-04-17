@@ -6,6 +6,9 @@ CREATE TABLE IF NOT EXISTS customers(
 	phone_number VARCHAR(15)
 );
 
+-- Index on customer_id to speed up joins and lookups involving customers,
+-- particularly when joining with the `orders` table or filtering customers.
+CREATE INDEX idx_customer_customer_id ON customers(customer_id);
 
 -- Create Products Table
 CREATE TABLE IF NOT EXISTS products(
@@ -18,6 +21,16 @@ CREATE TABLE IF NOT EXISTS products(
 );
 
 
+-- Composite index on stock and reorder_level improves performance for
+-- queries checking low stock levels (e.g., stock < reorder_level),
+-- such as in inventory monitoring or restock alerts.
+CREATE INDEX idx_products_stock_reorder ON products(stock, reorder_level);
+
+-- Index on product_id to support efficient joins and lookups involving products,
+-- especially useful for queries that reference products in the `order_details` table.
+CREATE INDEX idx_products_product_id ON products(product_id);
+
+
 -- Create Orders Table
 CREATE TABLE IF NOT EXISTS orders(
 	order_id SERIAL PRIMARY KEY,
@@ -27,6 +40,11 @@ CREATE TABLE IF NOT EXISTS orders(
 	CONSTRAINT fk_customer FOREIGN KEY (customer_id) REFERENCES customers(customer_id)
 );
 
+
+
+-- Index on customer_id in the orders table to enhance lookup and join speed
+-- when aggregating orders by customer, such as in customer activity or reporting views.
+CREATE INDEX idx_orders_customer_id ON orders(customer_id);
 
 
 
@@ -44,6 +62,11 @@ CREATE TABLE IF NOT EXISTS order_details(
 --Add discount column to order_details
 ALTER TABLE order_details 
 ADD COLUMN discount NUMERIC(4,2) DEFAULT 0;
+
+
+-- Index on order_id in the order_details table for faster joins with the
+-- `orders` table
+CREATE INDEX idx_order_details_order_id ON order_details(order_id);
 
 
 -- Create iNventory logs table 
@@ -65,3 +88,6 @@ CREATE TABLE IF NOT EXISTS inventory_logs(
 	event_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
+-- Index on event_type in inventory_logs to improve performance when filtering
+-- logs by event type (e.g., 'order', 'restock', etc.) during auditing.
+CREATE INDEX idx_inventory_logs_event_type ON inventory_logs(event_type);
