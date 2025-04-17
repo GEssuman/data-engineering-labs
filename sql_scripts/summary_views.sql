@@ -1,6 +1,6 @@
 -- View 1: Orders Per Customer
 -- This view summarizes customer orders by including number of items, total amount, and date of the order.
-CREATE OR REPLACE VIEW orders_per_customer AS 
+CREATE OR REPLACE VIEW vw_orders_per_customer AS 
 WITH order_detail AS (
 	SELECT
 		order_id,
@@ -10,8 +10,7 @@ WITH order_detail AS (
 ) 
 SELECT 
 	customer.name AS customer_name,               
-	orders.total_amount,         
-	orders.order_id,             
+	orders.total_amount,                     
 	order_detail.number_of_items
 	orders.order_date            
 FROM orders 
@@ -21,7 +20,7 @@ JOIN order_detail ON orders.order_id = order_detail.order_id;
 
 -- View 2: Low on Stock
 -- Identifies products that are below their reorder level
-CREATE OR REPLACE VIEW low_on_stock AS 
+CREATE OR REPLACE VIEW vw_low_on_stock AS 
 SELECT 
 	name AS product_name,          
 	stock,        
@@ -38,7 +37,7 @@ ORDER BY stock ASC;
 
 -- View 3: Customer Categorization
 -- Categorizes customers into Bronze, Silver, and Gold tiers based on their total spending.
-CREATE OR REPLACE VIEW customers_categorization AS
+CREATE OR REPLACE VIEW vw_customers_categorization AS
 --Get orders made by acustomer and sum of total amount spent 
 WITH customer_spending AS (
 	SELECT 
@@ -62,6 +61,27 @@ SELECT
 FROM customer_spending cs 
 JOIN customers c ON cs.customer_id = c.customer_id;
 
-
 -- View the categorized customer data
 -- SELECT * FROM customers_categorization;
+
+
+
+-- View 4: Orders_info
+-- A view that summarizes order information
+CREATE VIEW vw_orders_info AS
+    WITH order_detail_info AS (
+        SELECT 
+            order_id,
+            SUM(quantity) AS number_of_items  -- Total number of items in each order
+        FROM order_details
+        GROUP BY order_id
+    )
+    SELECT 
+        c.name,
+        o.total_amount,
+        od.number_of_items,
+        o.order_date
+    FROM orders AS o
+    JOIN order_detail_info AS od ON o.order_id = od.order_id
+	JOIN customers c ON o.customer_id = c.customer_id
+    ORDER BY o.order_date DESC;  -- Most recent orders appear first
