@@ -8,5 +8,10 @@ This project demonstrates an inventory and order management system using **Postg
 - **Views** for simplified data analysis and reporting
 - **Inventory logging** to track product changes and monitor order status
 
+
+### Performace Optimization
+- Added indexes on frequetly queried columns such as customer_id, product_id, ordered_id to reduce query execution time
+- Converted selected views to materialized views where the data doesn't change frequently. This enhances read peerformance.
+
 An **ERD (Entity Relationship Diagram)** is also provided below to illustrate the database structure and relationships.
 ![](./ER-Diagram.png)
