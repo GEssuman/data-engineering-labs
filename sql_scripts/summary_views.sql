@@ -35,9 +35,9 @@ ORDER BY stock ASC;
 
 
 
--- View 3: Customer Categorization
+-- Materialied View 3: Customer Categorization
 -- Categorizes customers into Bronze, Silver, and Gold tiers based on their total spending.
-CREATE OR REPLACE VIEW vw_customers_categorization AS
+CREATE MATERIALIZED VIEW IF NOT EXISTS mv_customers_categorization AS
 --Get orders made by acustomer and sum of total amount spent 
 WITH customer_spending AS (
 	SELECT 
@@ -55,11 +55,12 @@ SELECT
 	cs.order_count,  
 	CASE
 		WHEN cs.total_amount_spent < 500 THEN 'Bronze'                -- Low spenders
-		WHEN cs.total_amount_spent >= 500 AND cs.total_spent < 1500 THEN 'Silver' -- Medium spenders
+		WHEN cs.total_amount_spent >= 500 AND cs.total_amount_spent < 1500 THEN 'Silver' -- Medium spenders
 		ELSE 'Gold'                                            -- High spenders
 	END AS category            -- column to categorize customers per the total amount spent on orders 
 FROM customer_spending cs 
 JOIN customers c ON cs.customer_id = c.customer_id;
+
 
 -- View the categorized customer data
 -- SELECT * FROM customers_categorization;
