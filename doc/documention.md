@@ -17,13 +17,13 @@ I utilized the **TMDB API** to retrieve detailed metadata for a selected list of
 ## 2. Data Cleaning & Preprocessing
 
 ### Data Preparation
-- Dropped some irrelevant columns`
-- Extracted some key data from JSON-like columns:
-- concatenated elemnets list and separated elements with `"|"`
+- Dropped some irrelevant columns such as` adults`, `imdb_id` and `status`
+- Extracted some key data from JSON-like columns (`genres`, `production_companies`)
+- concatenated elemnets' list and separated elements with `"|"`
 
 ### Handling Missing & Incorrect Data
-- Converted columns to appropriate types:
-- **Replaced unrealistic values**:
+- Converted columns to appropriate types; e.g., "Converted release_date to datetime, cast numeric fields to float64".
+- Replaced unrealistic values:
 - Converted some columns such as`budget` and `revenue` to **million USD**
 - Cleaned placeholder strings like `"No Data"` in `tagline` and `overview`
 - Removed duplicates and rows missing essential values

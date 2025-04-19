@@ -16,6 +16,10 @@ INTERNET_CONNECTION = False
 
 
 def extract():
+    """
+    Extracts movie and credit data either from the TMDB API (if online)
+    or from locally stored JSON files (if offline).
+    """
     if INTERNET_CONNECTION:
         movies_df, credits_df = get_all_data(BASE_URL, MOVIE_IDS, HEADERS)
         movies_df.to_json('./datasets/movies_raw_data.json')
@@ -30,13 +34,25 @@ def extract():
 
 
 def transform(movies_df, credits_df):
+    """
+    Cleans, transforms, and merges the extracted movie and credit datasets.
+    Handles JSON columns, fixes datatypes, replaces placeholders,
+    fills missing vote data, and reorders columns.
+    """
+
+    # Drop irrelevant columns
     columns_to_drop = ['adult', 'original_title', 'imdb_id', 'video', 'homepage']
     movies_df = drop_cols(movies_df, columns_to_drop)
+
+    # Expand and clean JSON-like fields
     movies_df = eval_movies_json_col(movies_df)
     credits_df = eval_credits_json_col(credits_df)
     credits_df = drop_cols(credits_df, 'crew')
+
+    # Merge movies and credits data
     combined_df = merge_dfs(movies_df, credits_df, 'id')
     
+    # Convert datatypes and replace placeholder values
     combined_df = convert_datatypes(combined_df)
     combined_df = replace_with_nan(combined_df, ['budget', 'revenue', 'runtime'])
     combined_df = replace_known_placeholders(combined_df, ['overview', 'tagline'])
@@ -51,12 +67,17 @@ def transform(movies_df, credits_df):
 
     # Vote fixing
     combined_df = replace_zero_count_vote(combined_df)
+
+    # Finalize column order
     reordered_df = reorder_col_and_reindex(combined_df)
     return reordered_df
 
 
 
 def load(df):
+    """
+    Saves the cleaned and transformed data into a CSV file.
+    """
     df.to_csv('./datasets/final_movie_data.csv', index=False)
     print("Data successfully loaded.")
 
