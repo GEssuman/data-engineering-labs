@@ -178,23 +178,35 @@ def convert_to_milions(df, cols):
         df = df.withColumnRenamed(col, col_rename)
     return df
         
-# # def rank_movies_with_col(df, col, asc=False):
-# #     return df.sort_values(col, ascending=asc, ignore_index=True)['title']
-# def rank_movies_with_col(df, col, asc=False):
-#     """
-#     Sorts the DataFrame based on a specific column to rank movies.
-#     Allows ascending/descending order.
-#     """
-#     return df.sort_values(col, ascending=asc, ignore_index=True)
+def rank_movies_with_col(df, cols, asc=False):
 
-# def cal_roi(df):
-#     """
-#     Calculates Return on Investment (ROI) for movies with a budget ≥ $10M.
-#     Adds a new column 'roi_musd' to the DataFrame.
-#     """
-#     filtered_df = df[df['budget_musd']>=10].copy()
-#     filtered_df['roi_musd'] = filtered_df['revenue_musd']/filtered_df['budget_musd']
-#     return filtered_df
+    if isinstance(cols, str):
+        cols = [cols]
+    if isinstance(asc, bool):
+        asc = [asc] * len(cols)
+    
+    sort_exprs = [
+        F.col(c).asc() if a else F.col(c).desc()
+        for c, a in zip(cols, asc)
+    ]
+    return df.orderBy(*sort_exprs)
+    # if asc == True:
+    #     return df.orderBy(F.col(col).asc())
+    # return df.orderBy(F.col(col).desc())
+
+def get_topmost(df, col):
+    return df.select(F.col(col)).first()
+
+
+
+def cal_roi(df):
+    """
+    Calculates Return on Investment (ROI) for movies with a budget ≥ $10M.
+    Adds a new column 'roi_musd' to the DataFrame.
+    """
+    filtered_df = df.filter(F.col('budget_musd') >= 10)
+    filtered_df = filtered_df.withColumn('roi_musd',  F.col('revenue_musd')/F.col('budget_musd'))
+    return filtered_df
 
 def replace_zero_count_vote(df):
     """
