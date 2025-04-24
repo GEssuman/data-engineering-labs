@@ -39,7 +39,7 @@ def get_all_data(spark, base_url, movie_ids, headers, movie_schema, credit_schem
             movies.append(movie_response)
             credits.append(credit_response)
 
-    print(movies)
+    # print(movies)
     
     movies_df = convert_to_dataframe(spark, movies, schema=movie_schema)
     credits_df = convert_to_dataframe(spark, credits, schema=credit_schema)
