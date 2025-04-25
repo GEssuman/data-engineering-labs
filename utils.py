@@ -1,8 +1,8 @@
 import requests
 from pyspark.sql import SparkSession
 from pyspark.sql import functions as F
-from pyspark.sql.types import StructField, StructType, StringType, IntegerType, DoubleType
-import numpy as np
+from pyspark.sql.types import StringType
+
 
 
 # TODO : Convert panda dependant functions to spark functions
@@ -53,7 +53,7 @@ def create_spark_session(app_name):
 
 def convert_to_dataframe(spark, json_data, schema):
     """
-    Converts a list of JSON objects into a Pandas DataFrame.
+    Converts a list of JSON objects into a PySpark DataFrame.
     """
     return spark.createDataFrame(json_data, schema)
 
@@ -179,6 +179,17 @@ def convert_to_milions(df, cols):
     return df
         
 def rank_movies_with_col(df, cols, asc=False):
+    """
+    This function sorts a Spark DataFrame based on one or multiple columns.
+    Parameters:
+    - df: The input Spark DataFrame.
+    - cols: A string or list of column names to sort by.
+    - asc: A boolean or list of booleans indicating sort order for each column 
+           (True for ascending, False for descending). If a single boolean is provided, 
+           it's applied to all columns.
+    The function uses PySpark's `orderBy` with dynamically constructed sort expressions.
+    Returns a DataFrame sorted by the specified columns and sort order.
+    """
 
     if isinstance(cols, str):
         cols = [cols]
@@ -190,12 +201,18 @@ def rank_movies_with_col(df, cols, asc=False):
         for c, a in zip(cols, asc)
     ]
     return df.orderBy(*sort_exprs)
-    # if asc == True:
-    #     return df.orderBy(F.col(col).asc())
-    # return df.orderBy(F.col(col).desc())
 
 def get_topmost(df, col):
+    """
+    This function retrieves the topmost (first) value from a specified column in a Spark DataFrame.
+    Parameters:
+    - df: The input Spark DataFrame.
+    - col: The name of the column to extract the value from.
+    Returns the value of the specified column from the first row of the DataFrame.
+    Note: If the DataFrame is not ordered, the result may be non-deterministic.
+    """
     return df.select(F.col(col)).first()
+
 
 
 
@@ -255,3 +272,130 @@ def reorder_col_and_reindex(df):
                                     'budget_musd', 'revenue_musd', 'production_companies','production_countries', 'vote_count', 'vote_average', 'popularity', 'runtime',
     'overview', 'spoken_languages', 'poster_path','cast', 'cast_size', 'director', 'crew_size'])
     return reordered_df
+
+
+def kpi_implementation(df):
+    kpi_results = {}
+
+    #movie with the highest revenue
+    kpi_results['highest_revenue'] = get_topmost(rank_movies_with_col(df, 'revenue_musd'), 'title')
+
+    # #movie with the highest budget
+    kpi_results['highest_budget'] = get_topmost(rank_movies_with_col(df, 'budget_musd'), 'title')
+
+    #movie with the highest and lowest profit
+    df = df.withColumn('profit_musd', F.col('revenue_musd') - F.col('budget_musd')) # column for profit
+    kpi_results['highest_profit'] = get_topmost(rank_movies_with_col(df, 'profit_musd'), 'title')
+    kpi_results['lowest_profit'] = get_topmost(rank_movies_with_col(df, 'profit_musd', asc=True), 'title')
+
+    #movie with the highest vote count
+    kpi_results['most_voted'] = get_topmost(rank_movies_with_col(df, 'vote_count'), 'title')
+
+     #movie with the highest popularity
+    kpi_results['most_pupular'] = get_topmost(rank_movies_with_col(df, 'popularity'), 'title')
+ 
+    #movie with the highest and lowest roi
+    filtered_df = cal_roi(df) # generate a df with roi column 
+    kpi_results['highest_roi'] = get_topmost(rank_movies_with_col(filtered_df, 'roi_musd'), 'title')
+    kpi_results['lowest_roi'] = get_topmost(rank_movies_with_col(filtered_df, 'roi_musd', asc=True), 'title')
+
+    #movie with the highest and lowest profit
+    filtered_df = df.filter(F.col('vote_count') >= 10)
+    kpi_results['highest_rated'] = get_topmost(rank_movies_with_col(filtered_df, 'vote_average'), 'title')
+    kpi_results['lowest_rated'] = get_topmost(rank_movies_with_col(filtered_df, 'vote_average', asc=True), 'title')
+
+    return kpi_results
+
+
+def get_best_scifi_action_movies_with_actor(df, actor_name='Bruce Willis'):
+    """
+    This function filters movies that belong to both 'Science Fiction' and 'Action' genres
+    and feature a specific actor (default is 'Bruce Willis').
+    It then ranks them by 'vote_average' in descending order.
+    Parameters:
+    - df: The input Spark DataFrame containing movie data.
+    - actor_name: The name of the actor to filter by (default: 'Bruce Willis').
+    Returns a DataFrame with the title, genres, and vote_average of the top-rated filtered movies.
+    """
+    genre_filter = (
+        F.col('genres').contains('Science Fiction') &
+        F.col('genres').contains('Action')
+    )
+
+    actor_filter = F.col('cast').contains(actor_name)
+    return rank_movies_with_col(df.filter(genre_filter & actor_filter), 'vote_average').select('title', 'genres', 'vote_average')
+
+def get_starring_directed_by(df, starring, directed_by):
+    """
+    This function filters movies that feature *all* actors in the `starring` list
+    and are directed by the specified `directed_by` director.
+    It then ranks the filtered movies by their 'runtime' in descending order.
+    Parameters:
+    - df: The input Spark DataFrame containing movie data.
+    - starring: A list of actor names to check in the 'cast' field.
+    - directed_by: The director's name to match in the 'director' field.
+    Returns a DataFrame with the title, cast, director, runtime, and vote_average
+    of the matching movies sorted by runtime.
+    """
+    starring_filter = F.lit(True)
+    for star in starring:
+       starring_filter = starring_filter & F.col('cast').contains(star)
+
+    director_filter = F.col('director') == directed_by
+    
+    return rank_movies_with_col(df.filter(starring_filter & director_filter), 'runtime').select('title', 'cast', 'director', 'runtime', 'vote_average')
+
+##Comparing interms of mean revenue
+def frachise_vrs_standalone(df):
+    df = df.withColumn(
+    "collection_type",
+    F.when(F.col("belongs_to_collection").isNull(), "Standalone").otherwise("Franchise"))
+    
+    df = df.withColumn('roi_musd',  F.col('revenue_musd')/F.col('budget_musd'))
+    return df.groupby('collection_type').agg(
+        F.mean('revenue_musd').alias('mean_revenue_musd'),
+        F.mean('id').alias('movie_count'),
+        F.mean('budget_musd').alias('mean_budget_musd'),
+        F.mean('popularity').alias('mean_popularity'),
+        F.mean('vote_average').alias('mean_rating'),
+        F.median('roi_musd').alias('median_roi_musd'))
+
+
+
+def most_succesful_franchises(df):
+    result = {}
+
+    # Based on total number of movies in franchise
+    most_successfull_in_franchise_by_total_movies = (
+        df.groupby('belongs_to_collection').agg(
+        F.count('id').alias('movies_count')
+    ))
+    result['most_successfull_in_franchise_by_total_movies'] =get_topmost(rank_movies_with_col(most_successfull_in_franchise_by_total_movies, 'movies_count'), 'belongs_to_collection')
+    
+    # Based on total number of movies and mean budget in franchise
+    most_successfull_in_franchise_by_mean_budget = (
+        df.groupby('belongs_to_collection').agg(
+            F.count('id').alias('total_movies'),
+            F.mean('budget_musd').alias('mean_budget_musd')
+        ))
+    result['most_successfull_in_franchise_by_mean_budget'] = get_topmost(rank_movies_with_col(most_successfull_in_franchise_by_mean_budget, ['total_movies', 'mean_budget_musd']), 'belongs_to_collection')
+
+
+    # Based on total number of movies and mean revenue in franchise
+    most_successfull_in_franchise_by_mean_revenue = (
+        df.groupby('belongs_to_collection')
+        .agg(
+             F.count('id').alias('total_movies'),
+            F.mean('revenue_musd').alias('mean_revenue_musd')
+        ))    
+    result['most_successfull_in_franchise_by_mean_revenue'] = get_topmost(rank_movies_with_col(most_successfull_in_franchise_by_mean_revenue, ['total_movies', 'mean_revenue_musd']), 'belongs_to_collection')
+  
+
+    # Based on mean rating in franchise
+    most_successfull_in_franchise_by_mean_average = (
+        df.groupby('belongs_to_collection')
+        .agg(F.mean('vote_average').alias('mean_average'))
+    )
+    result['most_successfull_in_franchise_by_mean_average'] = get_topmost(rank_movies_with_col(most_successfull_in_franchise_by_mean_average, 'mean_average'), 'belongs_to_collection')
+
+    return result
