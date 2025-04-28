@@ -1,0 +1,62 @@
+services:
+
+  postgres_db:
+    image: postgres:14
+    restart: always
+    container_name: real-time-spark-db
+    environment:
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=postgres
+      - POSTGRES_USER=postgres
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./scripts/sql:/docker-entrypoint-initdb.d
+    ports:
+      - "5433:5432"
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "postgres"]
+      interval: 30s
+      retries: 5
+    networks:
+      - real-time-network 
+  spark-master:
+    image: bitnami/spark:latest
+    container_name: real-time-spark-master
+    user: root
+    ports:
+      - "7077:7077"
+      - "8081:8080"
+    volumes:
+      - ../spark/apps:/opt/spark/apps
+      - ../spark/resources:/opt/spark/resources 
+      - ../e-commerce-user-events:/opt/spark
+    environment:
+      - SPARK_MODE=master
+      - SPARK_LOCAL_IP=spark-master
+    networks:
+      - real-time-network
+  spark-worker:
+    image: bitnami/spark:latest
+    container_name: real-time-spark-worker
+    user: root
+    ports:
+      - "9091:8081"
+      - "7000:7000"
+    depends_on:
+      - spark-master
+    environment:
+      - SPARK_MODE=worker
+      - SPARK_MASTER_URL=spark://spark-master:7077
+    volumes:
+      - ../spark/apps:/opt/spark/apps
+      - ../spark/resources:/opt/spark/resources 
+      - ../e-commerce-user-events:/opt/spark
+    networks:
+      - real-time-network
+    
+
+networks:
+  real-time-network:
+
+volumes:
+  pgdata:
