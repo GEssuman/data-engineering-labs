@@ -44,9 +44,10 @@ class UserEvent(ABC):
         pass
 
 class ProductViewEvent(UserEvent):
-    def __init__(self, product_name, customer_surname, customer_firstname, date_viewed):
+    def __init__(self, product_name, unit_price, customer_surname, customer_firstname, date_viewed):
         self.event_type = 'product_view'
         self.product_name = product_name
+        self.unit_price = unit_price
         self.customer_surname = customer_surname
         self.customer_firstname = customer_firstname
         self.date_viewed = date_viewed
@@ -58,6 +59,7 @@ class ProductViewEvent(UserEvent):
             'product_name': self.product_name,
             'customer_firstname': self.customer_firstname,
             'customer_surname': self.customer_surname,
+            'unit_price': self.unit_price,
             'date_viewed': self.date_viewed
 
         }
@@ -67,13 +69,13 @@ class ProductViewEvent(UserEvent):
         return f"{self.event_type}- {self.product_name}- {self.customer_surname} {self.customer_firstname}- {self.date_viewed}"
 
 class ProductPurchaseEvent(UserEvent):
-    def __init__(self, product_name, customer_surname, customer_firstname, date_purchased, unit_cost, quanity):
+    def __init__(self, product_name, customer_surname, customer_firstname, date_purchased, unit_price, quanity):
         self.event_type = 'product_purchase'
         self.product_name = product_name
         self.customer_surname = customer_surname
         self.customer_firstname = customer_firstname
         self.date_purchased = date_purchased
-        self.unit_cost = unit_cost
+        self.unit_price = unit_price
         self.quanity = quanity
 
     def to_dict(self):
@@ -83,7 +85,7 @@ class ProductPurchaseEvent(UserEvent):
             'customer_firstname': self.customer_firstname,
             'customer_surname': self.customer_surname,
             'date_purchased': self.date_purchased,
-            'unit_cost': self.unit_cost,
+            'unit_price': self.unit_price,
             'quanity': self.quanity
         }
     
