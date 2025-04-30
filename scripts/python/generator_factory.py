@@ -4,10 +4,10 @@ import csv
 import random
 from datetime import datetime, timedelta
 import uuid
-from model import UserEvent, ProductPurchaseEvent, ProductViewEvent
+from model import UserEvent, ProductPurchaseEvent, ProductViewEvent, CUSTOMER_NAMES, PRODUCTS
 
 class UserEventGenerator(ABC):
-
+    products = list(PRODUCTS.keys())
     def __init__(self):
         self.events = []
         self.fieldnames = []
@@ -40,18 +40,18 @@ class ProductViewGenerator(UserEventGenerator):
         super().__init__()
         self.sub_folder = "product-view-events"
         self.filename = f"product_view_events_{uuid.uuid4()}.csv"
-        self.fieldnames =  ['event_type', 'product_name', 'customer_name', 'date_viewed']
+        self.fieldnames =  ['event_type', 'product_name', 'customer_surname', 'customer_firstname', 'date_viewed']
     
     def prepare_event(self) -> list[UserEvent]:
         """Return list of product view by user event"""
-        products = ['Phone', 'Laptop', 'Tablet', 'Headphone']
-        customers = ['Kwadwo', 'Evans', 'Julliet', 'Abigail', 'Isaiah']
+
         today = datetime.today()
         num_of_events  = random.randint(25, 50)
         for _ in range(num_of_events):
             event = ProductViewEvent(
-                product_name=random.choice(products),
-                customer_name= random.choice(customers),
+                product_name=random.choice(UserEventGenerator.products),
+                customer_firstname = random.choice(CUSTOMER_NAMES).split(' ')[1],
+                customer_surname = random.choice(CUSTOMER_NAMES).split(' ')[0],
                 date_viewed=(today - timedelta(days=random.randint(0, 30), minutes=random.randint(0, 60))).strftime("%d-%m-%Y, %H:%M:%S"))
             self.events.append(event)
 
@@ -63,28 +63,23 @@ class ProductPurchaseGenerator(UserEventGenerator):
         super().__init__()
         self.sub_folder = "product-purchase-events"
         self.filename = f"product_purchase_event_{uuid.uuid4()}.csv"
-        self.fieldnames = ['event_type', 'product_name', 'customer_name', 'date_purchased', 'unit_cost', 'quanity']
-        self.product_prices = {
-            'Phone': 35.0,
-            'Laptop': 45.0,
-            'Tablet': 30.0,
-            'Headphone': 25.0
-        }
+        self.fieldnames = ['event_type', 'product_name', 'customer_surname', 'customer_firstname', 'date_purchased', 'unit_cost', 'quanity']
         
     def prepare_event(self) -> UserEvent:
         """Return list of product purchases by user event"""
-        products = list(self.product_prices.keys())
+
 
         customers = ['Kwadwo', 'Evans', 'Julliet', 'Abigail', 'Isaiah']
         today = datetime.today()
         num_of_events  = random.randint(25, 50)
         for _ in range(num_of_events):
-            v_prod_name =random.choice(products)
+            v_prod_name =random.choice(UserEventGenerator.products)
 
             event = ProductPurchaseEvent(
                 product_name= v_prod_name,
-                customer_name= random.choice(customers),
-                unit_cost=self.product_prices[v_prod_name],
+                customer_firstname = random.choice(CUSTOMER_NAMES).split(' ')[1],
+                customer_surname = random.choice(CUSTOMER_NAMES).split(' ')[0],
+                unit_cost=PRODUCTS[v_prod_name],
                 quanity = random.randint(1, 5),
                 date_purchased=(today - timedelta(days=random.randint(0, 30), minutes=random.randint(0, 60))).strftime("%d-%m-%Y, %H:%M:%S"))
                 
