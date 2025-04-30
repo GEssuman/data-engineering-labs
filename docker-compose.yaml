@@ -27,12 +27,13 @@ services:
       - "7077:7077"
       - "8081:8080"
     volumes:
-      - ./spark/apps:/opt/spark/apps
-      - ./spark/resources:/opt/spark/resources 
-      - ./e-commerce-user-events:/opt/spark
+      - ./spark/apps:/opt/real-time-spark/spark/apps
+      - ./spark/resources:/opt/real-time-spark/spark/resources 
+      - ./e-commerce-user-events:/opt/real-time-spark/e-commerce-user-events
     environment:
       - SPARK_MODE=master
       - SPARK_LOCAL_IP=spark-master
+      - SPARK_WORKDIR=/opt/real-time-spark
     networks:
       - real-time-network
   spark-worker:
@@ -47,10 +48,12 @@ services:
     environment:
       - SPARK_MODE=worker
       - SPARK_MASTER_URL=spark://spark-master:7077
+      - SPARK_WORKDIR=/opt/real-time-spark
+
     volumes:
-      - ./spark/apps:/opt/spark/apps
-      - ./spark/resources:/opt/spark/resources 
-      - ./e-commerce-user-events:/opt/spark
+      - ./spark/apps:/opt/real-time-spark/spark/apps
+      - ./spark/resources:/opt/real-time-spark/spark/resources 
+      - ./e-commerce-user-events:/opt/real-time-spark/e-commerce-user-events
     networks:
       - real-time-network
     
