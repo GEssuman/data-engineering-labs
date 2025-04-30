@@ -80,3 +80,25 @@ real-time-data-ingestion/
     - PostgreSQL Database: A PostgreSQL container running with the postgres_db service.
     - Spark Master: The Spark master node available at port 7077.
     - Spark Worker: A Spark worker node for processing tasks.
+
+## Project Architecture
+- **Data Ingestion Simulation**
+- **Streaming Data Using Spark Stuctured Streaming**
+- **Load Data in PostgreSQL Database**
+
+
+### Data Ingesetion Streaming
+The system uses the **Factory Design Pattern** to modularly and extensibly manage event generators. Each event generator creates randomized, dummy data that is exported to a **new, uniquely named CSV file** on each execution—making it compatible with **Spark Structured Streaming**, which requires new files for each batch of streamed data.
+
+#### Event Generation and Export
+
+On each run:
+- The system generates 25–50 random events of each type.
+- Creates a new `.csv` file in the appropriate subdirectory:
+  - `product-view-events/`
+  - `product-purchase-events/`
+- File names are suffixed with a UUID, e.g.:
+  - `product_view_events_18e07c3a.csv`
+  - `product_purchase_event_a8b83b92.csv`
+
+> This design ensures **Spark Structured Streaming** can detect and process new files reliably.
