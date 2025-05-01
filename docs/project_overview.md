@@ -47,7 +47,7 @@ real-time-data-ingestion/
 
 
 ### Project Architecture
-
+![System Architecture](./system_architecture.png)
 - **Data Ingestion Simulation**  
   The system uses the **Factory Design Pattern** to modularly and extensibly manage event generators. Each event generator creates randomized, dummy data that is exported to a **new, uniquely named CSV file** on each execution.
 
