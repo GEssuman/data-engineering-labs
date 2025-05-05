@@ -2,6 +2,7 @@ import uuid
 import datetime
 import random
 import time
+import threading
 
 ## Class For Sensor Object
 class Sensor():
@@ -121,17 +122,32 @@ class Simulator():
         for i in range(self.number_of_customer):
             Simulator.customers.append(Customer(f"CUST_{i}"))
 
-        #install sensor for each customer
-        sensor_ids = []
+       
+        # Install one sensor per customer and launch a thread per sensor
+        threads = []
         for customer in Simulator.customers:
             sensor_id = customer.install_sensor()
-            sensor_ids.append((customer,sensor_id))
+            t = threading.Thread(target=self.run_sensor, args=(customer, sensor_id))
+            t.daemon = True  #makes threads exit when main program exits
+            t.start()
+            threads.append(t)
+        
+        try:
+            while True:
+                time.sleep(1)
+        except KeyboardInterrupt:
+            print("\nSimulation stopped.")
 
+    def run_sensor(self, customer, sensor_id):
+        """
+        Target function for each sensor's thread — repeatedly fetch.
 
-        # Simulate heartbeats for all sensors
+        Parameters:
+        customer (Customer): The customer object that owns the sensor.
+        sensor_id (UUID): The ID of the sensor to start.
+        """
+
         while True:
-            for customer, sensor_id in sensor_ids:
-                reading = customer.start_sensor(sensor_id)
-                print(reading)
-
-                time.sleep(0.5)
+            reading = customer.start_sensor(sensor_id)
+            print(reading)
+            time.sleep(0.5)
