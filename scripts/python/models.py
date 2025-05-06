@@ -3,6 +3,8 @@ import datetime
 import random
 import time
 import threading
+import json
+from kafka import KafkaProducer
 
 ## Class For Sensor Object
 class Sensor():
@@ -12,7 +14,7 @@ class Sensor():
     """
 
 
-    def __init__(self, user_id):
+    def __init__(self, user_id, kafka_bootstrap_servers='localhost:9092', topic="heart_beart"):
         """
         Initialize a SEensor instance for a given user.
 
@@ -21,6 +23,10 @@ class Sensor():
         """
         self.user_id = user_id
         self.sensor_id = uuid.uuid4() #Generate unique sensor ID
+        self.topic = topic
+        self.producer = KafkaProducer(
+            bootstrap_servers=kafka_bootstrap_servers,
+            value_serializer=lambda v: json.dumps(v).encode('utf-8'))
 
     def check_heart_beat(self):
         """
@@ -35,9 +41,14 @@ class Sensor():
         return {
             'user_id': self.user_id,
             'sensor_id': str(self.sensor_id),
-            'timestamp': timestamp,
+            'timestamp': timestamp.isoformat(),
             'heartbeat': heart_beat
         }
+    def publish_kafka(self, data):
+        self.producer.send(self.topic, value=data)
+        self.producer.flush()
+
+        
 
     def start(self):
         """
@@ -46,7 +57,9 @@ class Sensor():
         Returns:
         dict: A simulated heart beat reading .
         """
-        return self.check_heart_beat()
+        reading = self.check_heart_beat()
+        self.publish_kafka(reading)
+        return reading
 
 
 
@@ -100,6 +113,7 @@ class Simulator():
     Simulator class that manages multiple customers and simulates heart beat data generation.
     """
     customers = [] #list to store all customer instances
+   
 
     def __init__(self, number_of_customer):
         """
