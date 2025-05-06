@@ -3,3 +3,4 @@ example.log
 __pycache__
 .ipynb_checkpoints
 data
+bash.exe.stackdump

@@ -20,23 +20,24 @@ services:
     networks:
       - real-time-network 
   spark-master:
-    image: bitnami/spark:latest
+    image: spark-with-kafka:latest
     container_name: real-time-spark-master
     user: root
     ports:
       - "7077:7077"
       - "8080:8080"
     volumes:
-      - ../spark/apps:/opt/spark/apps
-      - ../spark/resources:/opt/spark/resources 
-      - ../e-commerce-user-events:/opt/spark
+      - ./spark/apps:/opt/spark/apps
+      - ./spark/resources:/opt/spark/resources 
     environment:
       - SPARK_MODE=master
       - SPARK_LOCAL_IP=spark-master
+    env_file:
+      - ./.env
     networks:
       - real-time-network
   spark-worker:
-    image: bitnami/spark:latest
+    image: spark-with-kafka:latest
     container_name: real-time-spark-worker
     user: root
     ports:
@@ -47,10 +48,11 @@ services:
     environment:
       - SPARK_MODE=worker
       - SPARK_MASTER_URL=spark://spark-master:7077
+    env_file:
+      - ./.env
     volumes:
-      - ../spark/apps:/opt/spark/apps
-      - ../spark/resources:/opt/spark/resources 
-      - ../e-commerce-user-events:/opt/spark
+      - ./spark/apps:/opt/spark/apps
+      - ./spark/resources:/opt/spark/resources 
     networks:
       - real-time-network
 
