@@ -15,3 +15,4 @@ This repository contains a collection of project that form the foundation of my 
 - ### [`Inventory and Order Management System Using SQL`](https://github.com/GEssuman/data-engineering-labs/tree/inventory_and_order_mgmt_sys)
 - ### [`Movie Data Analysis Using Python and PySpark`](https://github.com/GEssuman/data-engineering-labs/tree/spark/movie-data-analysis)
 - ### [`Real-Time Data Ingestion Using Spark Structured Streaming & PostgreSQL`](https://github.com/GEssuman/data-engineering-labs/tree/spark/real-time-data-ingestion)
+- ### [`Real-Time Customer Heart Beat Monitoring System `](https://github.com/GEssuman/data-engineering-labs/tree/spark-kafka/real-time-customer-heat-beat)
