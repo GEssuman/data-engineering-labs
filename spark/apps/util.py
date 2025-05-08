@@ -13,7 +13,7 @@ def subscribe_kafka_stream(spark, kafka_servers, topic, schema):
             .format("kafka") \
             .option("kafka.bootstrap.servers", kafka_servers) \
             .option("subscribe", topic) \
-            .option("startingOffsets", "latest") \
+            .option("startingOffsets", "earliest") \
             .load()
     
     df = df.select(F.from_json(F.col("value").cast("string"), schema).alias("data")).select("data.*")
@@ -42,19 +42,25 @@ def write_to_console(df):
     return query
 
 def write_to_postgres(batch_df, batch_id, output_sink):
-    batch_df.write.jdbc(
-        url=output_sink.get('url'),
-        table="heart_rate_aggregates",
-        mode="append",
-        properties=output_sink.get('properties')
-    )
+    try:
+    
+        batch_df.write.jdbc(
+            url=output_sink.get('url'),
+            table="heart_rate_aggregates",
+            mode="append",
+            properties=output_sink.get('properties')
+        ).save()
+        print(f"[BATCH {batch_id}] Successfully wrote batch of {batch_df.count()} rows.")
+    except Exception as e:
+        print(f"[BATCH {batch_id}]: {e}")
+
 
 
 def writeStream(df, output_sink):
     query = df.writeStream \
     .foreachBatch(lambda batch_df, batch_id: write_to_postgres(batch_df, batch_id, output_sink)) \
-    .option("checkpointLocation", "/opt/spark/checkpoints/heartbeat") \
     .outputMode("update") \
     .start()
+    # .option("checkpointLocation", "/opt/spark/checkpoints/heartbeat") \
 
     return query
