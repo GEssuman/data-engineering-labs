@@ -13,7 +13,7 @@ def subscribe_kafka_stream(spark, kafka_servers, topic, schema):
             .format("kafka") \
             .option("kafka.bootstrap.servers", kafka_servers) \
             .option("subscribe", topic) \
-            .option("startingOffsets", "earliest") \
+            .option("startingOffsets", "latest") \
             .load()
     
     df = df.select(F.from_json(F.col("value").cast("string"), schema).alias("data")).select("data.*")
@@ -35,7 +35,7 @@ def transform_data(df):
 
 def write_to_console(df):
     query = df.writeStream \
-    .outputMode('append') \
+    .outputMode('update') \
     .format("console") \
     .start()
 
@@ -44,7 +44,7 @@ def write_to_console(df):
 def write_to_postgres(batch_df, batch_id, output_sink):
     batch_df.write.jdbc(
         url=output_sink.get('url'),
-        table="event_log",
+        table="heart_rate_aggregates",
         mode="append",
         properties=output_sink.get('properties')
     )
@@ -53,8 +53,8 @@ def write_to_postgres(batch_df, batch_id, output_sink):
 def writeStream(df, output_sink):
     query = df.writeStream \
     .foreachBatch(lambda batch_df, batch_id: write_to_postgres(batch_df, batch_id, output_sink)) \
-    .outputMode("append") \
-    .trigger(processingTime="3 seconds") \
+    .option("checkpointLocation", "/opt/spark/checkpoints/heartbeat") \
+    .outputMode("update") \
     .start()
 
     return query

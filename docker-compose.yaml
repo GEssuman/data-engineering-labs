@@ -26,6 +26,8 @@ services:
     ports:
       - "7077:7077"
       - "8080:8080"
+    depends_on:
+      - broker
     volumes:
       - ./spark/apps:/opt/spark/apps
       - ./spark/resources:/opt/spark/resources 
@@ -45,6 +47,7 @@ services:
       - "8081:8081"
     depends_on:
       - spark-master
+      - broker
     environment:
       - SPARK_MODE=worker
       - SPARK_MASTER_URL=spark://spark-master:7077
@@ -93,7 +96,9 @@ services:
     
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
-      - ./data:/var/lib/kafka/data
+      - ./kafka-data:/var/lib/kafka/data
+      - ./kafka-checkpoint:/opt/spark/checkpoints/heartbeat
+
 
 
   control-center:
@@ -123,3 +128,4 @@ networks:
 
 volumes:
   pgdata:
+
