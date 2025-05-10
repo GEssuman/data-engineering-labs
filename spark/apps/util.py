@@ -34,8 +34,9 @@ def transform_data(df):
    pass
 
 def write_to_console(df):
+    df = df.orderBy(F.col("window_start").desc())
     query = df.writeStream \
-    .outputMode('update') \
+    .outputMode('complete') \
     .format("console") \
     .start()
 
@@ -59,8 +60,9 @@ def write_to_postgres(batch_df, batch_id, output_sink):
 def writeStream(df, output_sink):
     query = df.writeStream \
     .foreachBatch(lambda batch_df, batch_id: write_to_postgres(batch_df, batch_id, output_sink)) \
-    .outputMode("update") \
+    .outputMode("append") \
+    .option("checkpointLocation", "/opt/spark/checkpoints/heartbeat") \
+    .trigger(processingTime='30 seconds') \
     .start()
-    # .option("checkpointLocation", "/opt/spark/checkpoints/heartbeat") \
 
     return query

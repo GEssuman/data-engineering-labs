@@ -31,7 +31,7 @@ services:
     volumes:
       - ./spark/apps:/opt/spark/apps
       - ./spark/resources:/opt/spark/resources 
-      - ./kafka-checkpoint:/opt/spark/checkpoints/heartbeat
+      - spark_checkpoints:/opt/spark/checkpoints
     environment:
       - SPARK_MODE=master
       - SPARK_LOCAL_IP=spark-master
@@ -39,7 +39,7 @@ services:
       - ./.env
     networks:
       - real-time-network
-  spark-worker:
+  spark-worker-1:
     image: spark-with-kafka:latest
     container_name: real-time-spark-worker
     user: root
@@ -57,10 +57,31 @@ services:
     volumes:
       - ./spark/apps:/opt/spark/apps
       - ./spark/resources:/opt/spark/resources 
-      # - ./kafka-checkpoint:/opt/spark/checkpoints/heartbeat
+      - spark_checkpoints:/opt/spark/checkpoints
     networks:
       - real-time-network
 
+  spark-worker-2:
+    image: spark-with-kafka:latest
+    container_name: real-time-spark-worker-2
+    user: root
+    ports:
+      - "7001:7001"
+      - "8082:8082"
+    depends_on:
+      - spark-master
+      - broker
+    environment:
+      - SPARK_MODE=worker
+      - SPARK_MASTER_URL=spark://spark-master:7077
+    env_file:
+      - ./.env
+    volumes:
+      - ./spark/apps:/opt/spark/apps
+      - ./spark/resources:/opt/spark/resources 
+      - spark_checkpoints:/opt/spark/checkpoints
+    networks:
+      - real-time-network
 
  
 
@@ -90,6 +111,7 @@ services:
       KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
       KAFKA_LOG_RETENTION_HOURS: 168
 
+
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
 
       CLUSTER_ID: "kgaeiubflaukgfui"
@@ -97,10 +119,6 @@ services:
     networks:
       - real-time-network
     
-    volumes:
-      - /var/run/docker.sock:/var/run/docker.sock
-      - ./kafka-data:/var/lib/kafka/data
-      # - ./kafka-checkpoint:/opt/spark/checkpoints/heartbeat
 
 
 
@@ -132,6 +150,8 @@ services:
       - "3000:3000" 
     networks:
       - real-time-network
+    volumes:
+      - grafana_store:/var/lib/grafana
     depends_on:
       - postgres_db
 
@@ -142,4 +162,6 @@ networks:
 volumes:
   pgdata:
   spark_checkpoints:
+  grafana_store:
+  
 

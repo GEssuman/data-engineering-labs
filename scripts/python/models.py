@@ -14,7 +14,7 @@ class Sensor():
     """
 
 
-    def __init__(self, user_id, kafka_bootstrap_servers='localhost:9092', topic="heart_beart"):
+    def __init__(self, user_id, kafka_bootstrap_servers='localhost:9092', topic="heart_beat"):
         """
         Initialize a SEensor instance for a given user.
 

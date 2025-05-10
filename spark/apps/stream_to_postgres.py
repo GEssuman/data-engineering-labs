@@ -34,11 +34,11 @@ output_sink = {
 df = subscribe_kafka_stream(spark, "broker:29092", TOPIC_NAME, schema)
 
 
-agg_df = df.withWatermark("timestamp", "2 minutes").groupBy(
-        F.window(F.col("timestamp"), "1 minute", "10 seconds"),
+agg_df = df.withWatermark("timestamp", "15 seconds").groupBy(
+        F.window(F.col("timestamp"), "1 minute"),
         F.col("user_id")
         ).agg(
-            F.round(F.avg("heartbeat")).cast(IntegerType()).alias("avg_heartbeat")
+            F.avg("heartbeat").cast("int").alias("avg_heartbeat")
         )
 
 final_df = agg_df.select(
@@ -49,6 +49,7 @@ final_df = agg_df.select(
 )
 
 query = writeStream(final_df, output_sink)
+# query = write_to_console(final_df)
 
 
 query.awaitTermination()
