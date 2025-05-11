@@ -6,6 +6,12 @@ import threading
 import json
 from kafka import KafkaProducer
 
+
+import logging
+
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
 ## Class For Sensor Object
 class Sensor():
     """
@@ -24,9 +30,15 @@ class Sensor():
         self.user_id = user_id
         self.sensor_id = uuid.uuid4() #Generate unique sensor ID
         self.topic = topic
-        self.producer = KafkaProducer(
-            bootstrap_servers=kafka_bootstrap_servers,
-            value_serializer=lambda v: json.dumps(v).encode('utf-8'))
+        self.kafka_bootstrap_servers = kafka_bootstrap_servers
+        try:
+            self.producer = KafkaProducer(
+                bootstrap_servers=self.kafka_bootstrap_servers,
+                value_serializer=lambda v: json.dumps(v).encode('utf-8'))
+            logging.info(f"The sensor: { self.user_id} has subscribed to the broker serve: {kafka_bootstrap_servers} Succesfully")
+        except Exception as e:
+            logging.error(f"The sensor: { self.user_id} cannot subscribe to the broker serve: {kafka_bootstrap_servers}\n Error:- {e}")
+        logging.info(f"A sensor with ID:{self.sensor_id} object created to a user{self.user_id}")
 
     def check_heart_beat(self):
         """
@@ -35,7 +47,7 @@ class Sensor():
         Returns:
         dict: A dictionary caontaining the user_id, sensor_id, current timestamp, and a simulated heart beat value.
         """
-        heart_beat = int(random.uniform(60, 130)) #Simulated heart beat between 60 and 130bpm
+        heart_beat = int(random.uniform(40, 140)) #Simulated heart beat between 60 and 130bpm
         timestamp = datetime.datetime.now() #Current timespamp
 
         return {
@@ -44,9 +56,16 @@ class Sensor():
             'timestamp': timestamp.isoformat(),
             'heartbeat': heart_beat
         }
+    
     def publish_kafka(self, data):
-        self.producer.send(self.topic, value=data)
-        self.producer.flush()
+        if self.producer:
+            try:
+                self.producer.send(self.topic, value=data)
+                self.producer.flush()
+            except Exception as e:
+                logging.error(f"A sensor with ID:{self.sensor_id} could not publish to broker: {self.producer} with topic: {self.topic}\n Error:- {e}")
+        else:
+            logging.error(f"A sensor with ID:{self.sensor_id} is not a producer to the kafka broker: {self.kafka_bootstrap_servers}")
 
         
 
@@ -58,8 +77,11 @@ class Sensor():
         dict: A simulated heart beat reading .
         """
         reading = self.check_heart_beat()
-        self.publish_kafka(reading)
-        return reading
+        if reading:
+            self.publish_kafka(reading)
+            return reading
+        else: 
+            logging.error(f"A sensor with ID:{self.sensor_id} could not read the heartbeat of the user: {self.user_id}")
 
 
 
@@ -78,6 +100,7 @@ class Customer():
         """
         self.user_id = user_id
         self.sensors = {}
+        logging.info(f"Customer with id:{self.user_id} Registered Succesfully")
 
     def install_sensor(self):
         """
@@ -104,7 +127,7 @@ class Customer():
         if sensor:
             return sensor.start()
         else: 
-            print(f"No sensor found with id {sensor_id} for user {self.user_id}")
+            logging.error(f"No sensor found with id {sensor_id} for user {self.user_id}")
 
 
 
@@ -123,6 +146,7 @@ class Simulator():
         number_of_customers (int): The number of customers to simulate.
         """
         self.number_of_customer = number_of_customer
+        logging.info(f"Initialising Heart Rate Simulation with {self.number_of_customer} customers")
 
     def simulate(self):
         """
@@ -149,10 +173,10 @@ class Simulator():
         try:
             while True:
                 time.sleep(1)
-        except KeyboardInterrupt:
-            print("\nSimulation stopped.")
+        except KeyboardInterrupt as e:
+            logging.info("f\nSIMULATION STOPPED ")
 
-    def run_sensor(self, customer, sensor_id):
+    def run_sensor(self, customer:Customer, sensor_id):
         """
         Target function for each sensor's thread — repeatedly fetch.
 
@@ -164,4 +188,4 @@ class Simulator():
         while True:
             reading = customer.start_sensor(sensor_id)
             print(reading)
-            time.sleep(0.5)
+            time.sleep(10)
