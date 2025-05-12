@@ -27,7 +27,7 @@ output_sink = {
 
 
 spark = createSparkSession("StreamHeartRate")
-df = subscribe_kafka_stream(spark, "broker:29092", TOPIC_NAME, schema)
+df = subscribe_kafka_stream(spark, KAFKA_BROKER, TOPIC_NAME, schema)
 
 final_df = transform_data(df)
 

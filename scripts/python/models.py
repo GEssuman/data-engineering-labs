@@ -5,12 +5,18 @@ import time
 import threading
 import json
 from kafka import KafkaProducer
+import os
 
 
 import logging
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
+
+
+
+KAFKA_BROKER = os.environ.get("KAFKA_BROKER")
+TOPIC_NAME = os.environ.get("TOPIC_NAME")
 
 ## Class For Sensor Object
 class Sensor():
@@ -20,7 +26,7 @@ class Sensor():
     """
 
 
-    def __init__(self, user_id, kafka_bootstrap_servers='localhost:9092', topic="heart_beat"):
+    def __init__(self, user_id, kafka_bootstrap_servers=KAFKA_BROKER, topic=TOPIC_NAME):
         """
         Initialize a SEensor instance for a given user.
 

@@ -15,10 +15,83 @@ services:
       - "5433:5432"
     healthcheck:
       test: ["CMD", "pg_isready", "-U", "postgres"]
-      interval: 30s
+      interval: 10s
       retries: 5
     networks:
       - real-time-network 
+
+
+
+
+  broker:
+    image: confluentinc/cp-kafka:7.9.0
+    hostname: broker
+    container_name: broker
+    user: root
+    ports:
+      - "9092:9092"
+      - "9093:9093"
+    environment:
+      KAFKA_KRAFT_MODE: "true"
+
+      KAFKA_NODE_ID: 1
+      KAFKA_PROCESS_ROLES: controller,broker
+      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@broker:9093
+      
+      KAFKA_LISTENERS: 'PLAINTEXT://broker:29092,CONTROLLER://broker:9093,PLAINTEXT_HOST://0.0.0.0:9092'
+      KAFKA_ADVERTISED_LISTENERS: 'PLAINTEXT://broker:29092,PLAINTEXT_HOST://localhost:9092'
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: 'CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT'
+      
+      KAFKA_CONTROLLER_LISTENER_NAMES: 'CONTROLLER'
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+
+      KAFKA_LOG_DIRS: /var/lib/kafka/data 
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
+      KAFKA_LOG_RETENTION_HOURS: 168
+
+
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+
+      CLUSTER_ID: "kgaeiubflaukgfui"
+
+    networks:
+      - real-time-network
+
+
+  control-center:
+    image: confluentinc/cp-enterprise-control-center:7.9.0
+    hostname: control-center
+    container_name: control-center
+    depends_on:
+      - broker
+    ports:
+      - "9021:9021"
+    environment:
+      CONTROL_CENTER_BOOTSTRAP_SERVERS: 'broker:29092'
+      CONTROL_CENTER_REPLICATION_FACTOR: 1
+      CONTROL_CENTER_INTERNAL_TOPICS_PARTITIONS: 1
+      CONTROL_CENTER_MONITORING_INTERCEPTOR_TOPIC_PARTITIONS: 1
+      CONFLUENT_METRICS_TOPIC_REPLICATION: 1
+      PORT: 9021
+    networks:
+      - real-time-network
+
+  heart_rate_simulator:
+    build:
+      context: ./docker
+      dockerfile: docker-python/Dockerfile
+    container_name: heart-rate-simulator
+    depends_on:
+      - broker
+    volumes:
+      - ./scripts/python:/app
+    env_file:
+      - ./.env
+    networks:
+      - real-time-network
+    command: ["python", "/app/heart_beat_simulator.py"]
+     
+
   spark-master:
     image: spark-with-kafka:latest
     container_name: real-time-spark-master
@@ -29,6 +102,7 @@ services:
     depends_on:
       - broker
     volumes:
+      - ./spark/start_app.sh:/opt/spark/start_app.sh
       - ./spark/apps:/opt/spark/apps
       - ./spark/resources:/opt/spark/resources 
       - spark_checkpoints:/opt/spark/checkpoints
@@ -39,6 +113,9 @@ services:
       - ./.env
     networks:
       - real-time-network
+    command: bash /opt/spark/start_app.sh
+
+
   spark-worker-1:
     image: spark-with-kafka:latest
     container_name: real-time-spark-worker
@@ -83,63 +160,6 @@ services:
     networks:
       - real-time-network
 
- 
-
-  broker:
-    image: confluentinc/cp-kafka:7.9.0
-    hostname: broker
-    container_name: broker
-    user: root
-    ports:
-      - "9092:9092"
-      - "9093:9093"
-    environment:
-      KAFKA_KRAFT_MODE: "true"
-
-      KAFKA_NODE_ID: 1
-      KAFKA_PROCESS_ROLES: controller,broker
-      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@broker:9093
-      
-      KAFKA_LISTENERS: 'PLAINTEXT://broker:29092,CONTROLLER://broker:9093,PLAINTEXT_HOST://0.0.0.0:9092'
-      KAFKA_ADVERTISED_LISTENERS: 'PLAINTEXT://broker:29092,PLAINTEXT_HOST://localhost:9092'
-      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: 'CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT'
-      
-      KAFKA_CONTROLLER_LISTENER_NAMES: 'CONTROLLER'
-      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
-
-      KAFKA_LOG_DIRS: /var/lib/kafka/data 
-      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
-      KAFKA_LOG_RETENTION_HOURS: 168
-
-
-      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
-
-      CLUSTER_ID: "kgaeiubflaukgfui"
-
-    networks:
-      - real-time-network
-    
-
-
-
-  control-center:
-    image: confluentinc/cp-enterprise-control-center:7.9.0
-    hostname: control-center
-    container_name: control-center
-    depends_on:
-      - broker
-    ports:
-      - "9021:9021"
-    environment:
-      CONTROL_CENTER_BOOTSTRAP_SERVERS: 'broker:29092'
-      CONTROL_CENTER_REPLICATION_FACTOR: 1
-      CONTROL_CENTER_INTERNAL_TOPICS_PARTITIONS: 1
-      CONTROL_CENTER_MONITORING_INTERCEPTOR_TOPIC_PARTITIONS: 1
-      CONFLUENT_METRICS_TOPIC_REPLICATION: 1
-      PORT: 9021
-    networks:
-      - real-time-network
-
 
   grafana:
     image: grafana/grafana-oss:latest 
@@ -153,7 +173,8 @@ services:
     volumes:
       - grafana_store:/var/lib/grafana
     depends_on:
-      - postgres_db
+      postgres_db:
+        condition: service_healthy
 
 
 networks:
