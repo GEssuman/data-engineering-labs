@@ -3,10 +3,18 @@ import pyspark.sql.functions as F
 import psycopg2
 
 import logging
+import datetime
 
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
+
+
+alert_logger = logging.getLogger('heartbeat_alerts')
+alert_logger.setLevel(logging.INFO)
+alert_handler = logging.FileHandler(f'heartbeat_alerts_{datetime.datetime.now().strftime("%Y%m%d_%H%M%S")}.log')
+alert_handler.setFormatter(logging.Formatter('%(asctime)s - %(levelname)s - %(message)s'))
+alert_logger.addHandler(alert_handler)
 
 
 
@@ -48,8 +56,8 @@ def extract_value_kafa_msg(df, schema):
 
 def transform_data(df):
     try: 
-        agg_df = df.withWatermark("timestamp", "10 seconds").groupBy(
-            F.window(F.col("timestamp"), "1 minute"),
+        agg_df = df.withWatermark("timestamp", "5 seconds").groupBy(
+            F.window(F.col("timestamp"), "15 seconds"),
                 F.col("user_id")
                     ).agg(
                         F.avg("heartbeat").cast("int").alias("avg_heartbeat")
@@ -81,6 +89,14 @@ def write_to_console(df):
 
 def write_to_postgres(batch_df, batch_id, output_sink):
     try:
+
+        abnormal_rows = batch_df.filter((F.col("avg_heartbeat") > 110) | (F.col("avg_heartbeat") < 60)).collect()
+        for row in abnormal_rows:
+            alert_logger.info(
+                f"[ALERT] User: {row.user_id} | Avg Heartbeat: {row.avg_heartbeat} | "
+                f"Window: {row.window_start} - {row.window_end}"
+            )
+
         batch_df.write \
         .format("jdbc") \
         .option("url", output_sink.get('url')) \
@@ -129,8 +145,8 @@ def writeStream(df, output_sink):
         query = df.writeStream \
         .foreachBatch(lambda batch_df, batch_id: write_to_postgres(batch_df, batch_id, output_sink)) \
         .outputMode("append") \
-        .option("checkpointLocation", "/opt/spark/checkpoints/heartbeat_9") \
-        .trigger(processingTime='30 seconds') \
+        .option("checkpointLocation", "/opt/spark/checkpoints/heartbeat_11") \
+        .trigger(processingTime='10 seconds') \
         .start()   
         return query
     except Exception as e:

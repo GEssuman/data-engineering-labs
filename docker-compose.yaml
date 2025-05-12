@@ -54,6 +54,12 @@ services:
 
       CLUSTER_ID: "kgaeiubflaukgfui"
 
+    healthcheck:
+      test: ["CMD-SHELL", "bash -c '</dev/tcp/broker/29092' || exit 1"]
+      interval: 10s
+      timeout: 10s
+      retries: 5
+      start_period: 20s
     networks:
       - real-time-network
 
@@ -63,7 +69,8 @@ services:
     hostname: control-center
     container_name: control-center
     depends_on:
-      - broker
+      broker:
+        condition: service_healthy
     ports:
       - "9021:9021"
     environment:
@@ -82,7 +89,8 @@ services:
       dockerfile: docker-python/Dockerfile
     container_name: heart-rate-simulator
     depends_on:
-      - broker
+      broker:
+        condition: service_healthy
     volumes:
       - ./scripts/python:/app
     env_file:
@@ -100,7 +108,8 @@ services:
       - "7077:7077"
       - "8080:8080"
     depends_on:
-      - broker
+      broker:
+        condition: service_healthy
     volumes:
       - ./spark/start_app.sh:/opt/spark/start_app.sh
       - ./spark/apps:/opt/spark/apps
@@ -114,6 +123,8 @@ services:
     networks:
       - real-time-network
     command: bash /opt/spark/start_app.sh
+    mem_limit: 1g
+    cpus: 0.5
 
 
   spark-worker-1:
@@ -124,11 +135,16 @@ services:
       - "7000:7000"
       - "8081:8081"
     depends_on:
-      - spark-master
-      - broker
+      spark-master:
+        condition: service_started
+      broker:
+        condition: service_healthy
     environment:
       - SPARK_MODE=worker
       - SPARK_MASTER_URL=spark://spark-master:7077
+      - SPARK_WORKER_CORES=1
+      - SPARK_WORKER_MEMORY=1g
+
     env_file:
       - ./.env
     volumes:
@@ -137,6 +153,8 @@ services:
       - spark_checkpoints:/opt/spark/checkpoints
     networks:
       - real-time-network
+    mem_limit: 2g
+    cpus: 1.0
 
   spark-worker-2:
     image: spark-with-kafka:latest
@@ -146,11 +164,16 @@ services:
       - "7001:7001"
       - "8082:8082"
     depends_on:
-      - spark-master
-      - broker
+      spark-master:
+        condition: service_started
+      broker:
+        condition: service_healthy
     environment:
       - SPARK_MODE=worker
       - SPARK_MASTER_URL=spark://spark-master:7077
+      - SPARK_WORKER_CORES=1
+      - SPARK_WORKER_MEMORY=1g
+
     env_file:
       - ./.env
     volumes:
@@ -159,6 +182,8 @@ services:
       - spark_checkpoints:/opt/spark/checkpoints
     networks:
       - real-time-network
+    mem_limit: 2g
+    cpus: 1.0
 
 
   grafana:
