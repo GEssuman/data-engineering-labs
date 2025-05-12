@@ -25,7 +25,7 @@ cd data-engineering-labs
 
 2. **Switch to the correct branch** 
 ```bash
-git checkout spark/real-time-data-ingestion
+git checkout spark-kafka/real-time-customer-heat-beat
 ```
 
 
