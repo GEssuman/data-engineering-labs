@@ -1,3 +1,4 @@
 pandas
 kagglehub
 mysql-connector-python
+SQLAlchemy
