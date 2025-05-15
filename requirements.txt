@@ -1,0 +1,3 @@
+pandas
+kagglehub
+mysql-connector-python
