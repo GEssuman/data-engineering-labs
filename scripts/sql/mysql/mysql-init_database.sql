@@ -3,7 +3,6 @@ CREATE DATABASE bangladesh_flight_db;
 USE bangladesh_flight_db;
 
 CREATE TABLE bangladesh_flight (
-    flight_id int NOT NULL AUTO_INCREMENT,
     airline  VARCHAR(100),
     source  VARCHAR(100),
     source_name VARCHAR(255),
@@ -21,5 +20,5 @@ CREATE TABLE bangladesh_flight (
     total_fare DOUBLE(10,2),
     seasonality VARCHAR(20),
     days_before_departure INT,
-    PRIMARY KEY (airline, source, destination, departure)
+    PRIMARY KEY (airline, source, destination, departure_datetime)
 )
