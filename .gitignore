@@ -1,0 +1,13 @@
+.env
+example.log
+**/__pycache__/
+*.py[cod]
+.ipynb_checkpoints
+data
+bash.exe.stackdump
+kafka-data
+kafka-ipynb_checkpoint
+kafka-checkpoint
+*.log
+*.logs
+venv/
