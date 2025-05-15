@@ -16,3 +16,6 @@ This repository contains a collection of project that form the foundation of my 
 - ### [`Movie Data Analysis Using Python and PySpark`](https://github.com/GEssuman/data-engineering-labs/tree/spark/movie-data-analysis)
 - ### [`Real-Time Data Ingestion Using Spark Structured Streaming & PostgreSQL`](https://github.com/GEssuman/data-engineering-labs/tree/spark/real-time-data-ingestion)
 - ### [`Real-Time Customer Heart Beat Monitoring System `](https://github.com/GEssuman/data-engineering-labs/tree/spark-kafka/real-time-customer-heat-beat)
+- ### [`Airflow Project: Flight Price Analysis`](https://github.com/GEssuman/data-engineering-labs/tree/airflow/flight-price-analysis)
+
+
