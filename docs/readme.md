@@ -21,14 +21,24 @@ To build a reliable and automated data pipeline using Apache Airflow that proces
 
 
 ## **Tools & Technologies Used**
-- Apache Airflow: Orchestration of ETL pipeline.
-- Pandas: Data transformation and KPI computation.
-- PostgreSQL: Final storage of cleaned and aggregated data.
-- Docker: Environment management.
-- MySQL (intermediate or initial staging).
-- Python: Custom ETL logic and database interactions.
-- Logging: For monitoring pipeline success and errors.
+| Tool           | Purpose                                  |
+|----------------|-------------------------------------------|
+| **Apache Airflow (Astro)** | DAG scheduling and orchestration     |
+| **Pandas**      | Data transformation, cleaning, and KPI calculation |
+| **MySQL**       | Intermediate staging of raw flight data  |
+| **PostgreSQL**  | Final analytics data storage             |
+| **Docker**      | Containerized service management         |
+| **Python**      | Custom ETL logic                         |
+| **Logging**     | Monitoring pipeline success and failure  |
 
+##  Pipeline Status
+
+- Data extraction from Kaggle using API  
+- Data validation, cleanup, and schema normalization  
+- Staging to MySQL  
+- Data transformation with KPI and seasonality classification  
+- Loading to PostgreSQL  
+- Error handling & logging in each stage
 
 ## **User Guide**
 
@@ -41,6 +51,7 @@ cd data-engineering-labs
 2. **Switch to the correct branch** 
 ```bash
 git checkout airflow/flight-price-analysis
+cd airflow
 ```
 
 
@@ -53,13 +64,25 @@ Create `.env` File
 
 4. **Start all services**  
 ```bash
-docker compose up --build
+astro dev start
 ```
 
 ## **Docker Compose Services**
 
-- **MYSQL**: `mysql:latest`
-- **POSTGRESQL**: `postgres:14`
+This launches:
+- Airflow apiserver
+- Airflow Dag Processor
+- Airflow Scheduler, Triggerer
+- MySQL and PostgreSQL services
+
+| Service     | Image             | Role                  |
+|-------------|------------------|-----------------------|
+| `mysql`     | `mysql:latest`   | Data staging          |
+| `postgres`  | `postgres:14`    | Final storage         |
+| `airflow`   | Astro-managed    | DAG orchestration     |
+
+ Ensure all services are on the **same Docker network** (Astro handles this by default under `astro dev`).
+
 ---
 
 
@@ -85,3 +108,13 @@ Data is staged into a MySQL database.
 Final cleaned and enriched dataset is written to a PostgreSQL database.
 
 Schema includes fields like airline, source, destination, fare, departure time, etc.
+
+
+## After Succesful Run on the DAG in the api-webser
+
+***DAG in Graph Form***
+![DAG in Graph Form](../docs/DAG-graph.png)
+
+
+***DAG in Grid Form***
+![DAG in Grid Form](../docs/DAG_grid.png)

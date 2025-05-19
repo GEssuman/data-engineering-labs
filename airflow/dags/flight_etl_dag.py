@@ -3,8 +3,8 @@ from datetime import datetime, timedelta
 from airflow.operators.python import PythonOperator
 from include.utils import *
 import numpy as np
-from airflow.models import Variable
-import pickle
+from airflow.exceptions import AirflowFailException
+from include.logging_config import setup_logger
 
 
 kaggle_url = "mahatiratusher/flight-price-dataset-of-bangladesh"
@@ -12,81 +12,89 @@ output_dir = "/usr/local/airflow/input"
 
 
 
-
+logger = setup_logger(__name__)  # or setup_logger("etl.utils")
 
 default_args = {
     'owner': 'gkessuman',
     'retries': 5,
     'retry_delay': timedelta(minutes=5)
 }
-def serialize_df(df):
-    return pickle.dumps(df)
 
-def deserialize_df(binary_data):
-    return pickle.loads(binary_data)
-
+# DAG Tasks
 def get_dataset():
-    path = download_dataset(kaggle_url, output_dir)
-    print(f"The dir for the datasest-:{path}")
-    return path
+    try:
+        path = download_dataset(kaggle_url, output_dir)
+        logger.info(f"Dataset downloaded to: {path}")
+        return path
+    except Exception as e:
+        logger.error(f"Error in get_dataset: {e}")
+        raise AirflowFailException("Dataset download failed")
 
 
 def stage():
-    df = pd.read_csv(f"{output_dir}/Flight_Price_Dataset_of_Bangladesh.csv")
-    print("kojo",df)
+    try:
+        df = pd.read_csv(f"{output_dir}/Flight_Price_Dataset_of_Bangladesh.csv")
+        logger.info(f"Loaded dataset with shape: {df.shape}")
 
-    df = prepare_data(df)
-    print(df)
-    host=os.environ.get("MYSQL_HOST", "mysql")
-    user=os.environ.get("MYSQL_USER", "root")
-    password=os.environ.get("MYSQL_PASSWORD", "my-secret")
-    dbname = os.environ.get("MYSQL_DB", "bangladesh_flight_db")
-    url=f"mysql+mysqlconnector://{user}:{password}@{host}/{dbname}"
-    bangladesh_conn = get_connection_sqlalchemy(url)
-    stage_to_mysql_alchemy(df, bangladesh_conn)
+        df = prepare_data(df)
+
+        host = os.environ.get("MYSQL_HOST", "mysql")
+        user = os.environ.get("MYSQL_USER", "root")
+        password = os.environ.get("MYSQL_PASSWORD", "my-secret")
+        dbname = os.environ.get("MYSQL_DB", "bangladesh_flight_db")
+        url = f"mysql+mysqlconnector://{user}:{password}@{host}/{dbname}"
+
+        bangladesh_conn = get_connection_sqlalchemy(url)
+        stage_to_mysql_alchemy(df, bangladesh_conn)
+
+        logger.info("Data staged successfully to MySQL.")
+    except Exception as e:
+        logger.error(f"Error in stage: {e}")
+        raise AirflowFailException("Staging data failed")
 
 def transform(**context):
-    # read from mysql
-    host = os.environ.get("MYSQL_HOST", "mysql")
-    user = os.environ.get("MYSQL_USER", "root")
-    password = os.environ.get("MYSQL_PASSWORD", "my-secret")
-    dbname = os.environ.get("MYSQL_DB", "bangladesh_flight_db")
-    url = f"mysql+mysqlconnector://{user}:{password}@{host}/{dbname}"
-    conn = get_connection_sqlalchemy(url)
+    try:
+        host = os.environ.get("MYSQL_HOST", "mysql")
+        user = os.environ.get("MYSQL_USER", "root")
+        password = os.environ.get("MYSQL_PASSWORD", "my-secret")
+        dbname = os.environ.get("MYSQL_DB", "bangladesh_flight_db")
+        url = f"mysql+mysqlconnector://{user}:{password}@{host}/{dbname}"
 
-    df = pd.read_sql("SELECT * FROM bangladesh_flight", conn)
+        conn = get_connection_sqlalchemy(url)
+        df = pd.read_sql("SELECT * FROM bangladesh_flight", conn)
 
-    # tranform
-    if not ("total_fare" in df.columns):
-        df['total_fare']=df['tax_surcharge'] + df['base_fare']
-    df['peak_season'] = np.where(df["seasonality"] != "Regular", "peaked", "not peaked")
+        if "total_fare" not in df.columns:
+            df['total_fare'] = df['tax_surcharge'] + df['base_fare']
 
+        df['peak_season'] = np.where(df["seasonality"] != "Regular", "peaked", "not peaked")
 
-    # Push via XCom
-    # Save to CSV or temp table
-    transformed_path = "/tmp/transformed_data.csv"
-    df.to_csv(transformed_path, index=False)
+        transformed_path = "/tmp/transformed_data.csv"
+        df.to_csv(transformed_path, index=False)
 
-    # Push file path to XCom
-    context['ti'].xcom_push(key='transformed_path', value=transformed_path)
-
+        context['ti'].xcom_push(key='transformed_path', value=transformed_path)
+        logger.info("Data transformed and saved to temporary file.")
+    except Exception as e:
+        logger.error(f"Error in transform: {e}")
+        raise AirflowFailException("Transformation failed")
     
     
 def load(**context):
-    # Pull path from XCom
-    transformed_path = context['ti'].xcom_pull(task_ids='transform_data', key='transformed_path')
-     # Load the CSV
-    df = pd.read_csv(transformed_path)
+    try:
+        transformed_path = context['ti'].xcom_pull(task_ids='transform_data', key='transformed_path')
+        df = pd.read_csv(transformed_path)
+
+        pg_url = "postgresql+psycopg2://postgres:postgres@postgres/bangladesh_flight_final_db"
+        pg_conn = get_connection_sqlalchemy(pg_url)
+
+        df.to_sql("bangladesh_flight_analytics", pg_conn, if_exists='replace', index=False)
+        logger.info("Loaded transformed data to PostgreSQL.")
+    except Exception as e:
+        logger.error(f"Error in load: {e}")
+        raise AirflowFailException("Load to PostgreSQL failed")
+    
 
 
-    pg_url = f"postgresql+psycopg2://postgres:postgres@postgres/bangladesh_flight_final_db"
-    pg_conn = get_connection_sqlalchemy(pg_url)
-   
-   
-    #load to postgress
-    df.to_sql("bangladesh_flight_analytics", pg_conn, if_exists='replace', index=False)
-    print("Loaded transformed data to PostgreSQL.")
-
+    
 with DAG(
     "my_own_dag",
     default_args=default_args
