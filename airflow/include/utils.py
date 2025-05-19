@@ -2,7 +2,7 @@ import kagglehub
 import os
 import shutil
 import pathlib
-from logging_config import setup_logger
+from include.logging_config import setup_logger
 from sqlalchemy import create_engine
 import pandas as pd
 import mysql.connector
@@ -36,9 +36,7 @@ def download_dataset(url, output_dir):
         if path_exists(output_dir) and os.listdir(output_dir):
             logger.info(f"Dataset already exists in '{output_dir}'. Skipping download.")
             return
-        else:
-            create_dir(output_dir)
-        
+      
         logger.info(f"Downloading dataset from: {url}")
         path = kagglehub.dataset_download(url)
 
@@ -49,6 +47,7 @@ def download_dataset(url, output_dir):
         for file in os.listdir(path):
             src = os.path.join(path, file)
             shutil.move(src, output_dir)
+        output_dir=os.path.abspath(output_dir)
         logger.info(f"Moved files: {path} → {output_dir}")
 
         
@@ -115,13 +114,13 @@ def prepare_data(df):
 
     df['departure_datetime'] = pd.to_datetime(df['departure_datetime']).dt.strftime('%Y-%m-%d %H:%M:%S')
     df['arrival_datetime'] = pd.to_datetime(df['arrival_datetime']).dt.strftime('%Y-%m-%d %H:%M:%S')
+    return df
 
 def stage_to_mysql_alchemy(df, conn):
     try:
         logger.info("Staging data to MYSQL Database")
 
         df.to_sql("bangladesh_flight", conn, if_exists="append",index=False)
-        succes_count += 1
         logger.info(f"Staging completed")
     except IntegrityErrorAlchemy as e:
         logger.warning(f"Encounted Duplicate Entry : {e}")

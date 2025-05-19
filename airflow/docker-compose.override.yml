@@ -1,0 +1,46 @@
+services:
+  mysql:
+    image: mysql:latest
+    restart: always
+    healthcheck:
+     test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+     interval: 10s
+     timeout: 5s
+     retries: 5
+    ports:
+      - "3306:3306"
+    environment:
+      - MYSQL_ROOT_PASSWORD=${MYSQL_PASSWORD}
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ../scripts/sql/mysql:/docker-entrypoint-initdb.d
+    networks:
+      - airflow_7f3fbf_airflow
+
+  postgres:
+    image: postgres:14
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: postgres
+    volumes:
+      - postgres-db-volume:/var/lib/postgresql/data
+      - ../scripts/sql/postgresql:/docker-entrypoint-initdb.d
+    ports:
+      - "5435:5432"
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "postgres"]
+      interval: 10s
+      retries: 5
+      start_period: 5s
+    restart: always
+    networks:
+      - airflow_7f3fbf_airflow
+volumes:
+  mysql_data:
+  postgres-db-volume:
+
+
+networks:
+  airflow_7f3fbf_airflow:
+    external: true  # Use Astro's default Docker network

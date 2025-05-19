@@ -2,3 +2,5 @@ pandas
 kagglehub
 mysql-connector-python
 SQLAlchemy
+apache-airflow
+numpy

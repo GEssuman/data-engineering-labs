@@ -1,0 +1,41 @@
+airflow:
+    expose_port: "false"
+api-server:
+    port: "8080"
+auto_select: "false"
+cloud:
+    api:
+        port: "443"
+        protocol: https
+        ws_protocol: wss
+disable_astro_run: "false"
+disable_env_objects: "false"
+duplicate_volumes: "true"
+houston:
+    dial_timeout: "10"
+    skip_verify_tls: "false"
+interactive: "false"
+local:
+    core: http://localhost:8888
+    platform: cloud
+    registry: localhost:5555
+machine:
+    cpu: "2"
+    memory: "4096"
+page_size: "20"
+postgres:
+    host: postgres
+    password: postgres
+    port: "5432"
+    repository: docker.io/postgres
+    tag: "12.6"
+    user: postgres
+ruff:
+    image: ghcr.io/astral-sh/ruff:latest
+sha_as_tag: "false"
+show_warnings: "true"
+skip_parse: "false"
+upgrade_message: "true"
+verbosity: warning
+webserver:
+    port: "8080"
