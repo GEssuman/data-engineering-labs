@@ -101,8 +101,49 @@ Datatypes such as datetime, float, and int are validated and converted appropria
 Data is staged into a MySQL database.
 ---
 
-3. KPI Computation
-***---***
+### 3. KPI Computation
+
+This step transforms the raw staged flight pricing data into actionable metrics (Key Performance Indicators) used for analytical insights. These KPIs are computed after staging the cleaned dataset into a MySQL database and are then saved for loading into PostgreSQL.
+
+#### Average Fare Per Airline
+- **Description**: Calculates the mean base fare and total fare (base fare + tax surcharge) for each airline.
+- **Columns**:
+  - `airline`
+  - `avg_base_fare`
+  - `avg_total_fare`
+  - `booking_count`
+
+#### Peak Season Summary
+- **Description**: Aggregates flight bookings based on the seasonality of travel.
+- **Logic**:
+  - Flights with seasonality not equal to `"Regular"` are categorized as `peaked`.
+  - Others are categorized as `not peaked`.
+- **Output**:
+  - Total bookings, average base fare and average total fare by `peak_season` status.
+
+#### Top Source-Destination Pairs
+- **Description**: Identifies the most common flight routes based on origin-destination pair frequency.
+- **Columns**:
+  - `source`
+  - `destination`
+  - `booking_count`
+
+---
+
+#### Processing Notes
+- Transformation is performed using **Pandas** and **NumPy**.
+- Each KPI is saved as a separate CSV file in `/tmp/`, then loaded into its corresponding table in **PostgreSQL**:
+  - `avg_fare_per_airline`
+  - `peak_season_summary`
+  - `top_source_dest_pairs`
+
+#### Error Handling
+- **Retry logic** is applied for transient connection issues (e.g., temporary database downtime).
+- **Integrity errors** (e.g., duplicate primary keys) are **skipped** to ensure the DAG does not fail entirely on known data issues.
+- Errors and task decisions (retry vs. skip) are logged using a centralized logger via `include.logging_config`.
+
+---
+
 
 4. Database Storage
 Final cleaned and enriched dataset is written to a PostgreSQL database.
@@ -113,8 +154,8 @@ Schema includes fields like airline, source, destination, fare, departure time, 
 ## After Succesful Run on the DAG in the api-webser
 
 ***DAG in Graph Form***
-![DAG in Graph Form](../docs/DAG-graph.png)
+![DAG in Graph Form](../docs/Final_DAG_graph.png)
 
 
 ***DAG in Grid Form***
-![DAG in Grid Form](../docs/DAG_grid.png)
+![DAG in Grid Form](../docs/Final_DAG_grid.png)

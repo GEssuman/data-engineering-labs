@@ -1,9 +1,15 @@
 services:
+
+  api-server:
+    container_name: webserver
+    volumes:
+      - ./connection.json:/opt/airflow/connection.json
+
   mysql:
     image: mysql:latest
     restart: always
     healthcheck:
-     test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+     test: ["CMD", "mysqladmin", "ping", "-h", "mysql"]
      interval: 10s
      timeout: 5s
      retries: 5
