@@ -84,6 +84,8 @@ This launches:
  Ensure all services are on the **same Docker network** (Astro handles this by default under `astro dev`).
 
 ---
+## *System Architecture **
+![System Architecture Diagram](../docs/Airflow%20Project_%20Flight%20Price%20Analysis%20.drawio.png)
 
 
 ## *Pipeline Overview**
@@ -93,7 +95,7 @@ Raw CSV files containing flight data are extracted form kaggle.
 Files are parsed using pandas and read into memory preparing for staging.
 
 
-2. Data Validation & Satagin
+2. Data Validation & Staging
 Columns are renamed and standardized to match database schema requirements
 
 Datatypes such as datetime, float, and int are validated and converted appropriately.
